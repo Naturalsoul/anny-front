@@ -17,6 +17,10 @@
 
 */
 import Dashboard from "views/Dashboard.jsx";
+import Company from 'views/Company.jsx';
+import Worker from 'views/Worker.jsx';
+import Liquidaciones from 'views/Liquidaciones.jsx';
+
 import Notifications from "views/Notifications.jsx";
 import Icons from "views/Icons.jsx";
 import Typography from "views/Typography.jsx";
@@ -27,20 +31,27 @@ import UpgradeToPro from "views/Upgrade.jsx";
 
 var routes = [
   {
-    path: "/dashboard",
-    name: "Dashboard",
-    icon: "nc-icon nc-bank",
-    component: Dashboard,
+    path: "/empresas",
+    name: "Empresas",
+    icon: "building",
+    component: Company,
     layout: "/admin"
   },
   {
-    path: "/icons",
-    name: "Icons",
-    icon: "nc-icon nc-diamond",
-    component: Icons,
+    path: "/trabajadores",
+    name: "Trabajadores",
+    icon: "users",
+    component: Worker,
     layout: "/admin"
   },
   {
+    path: '/liquidaciones',
+    name: 'Liquidaciones',
+    icon: 'file-invoice-dollar',
+    component: Liquidaciones,
+    layout: '/admin'
+  }
+  /* {
     path: "/maps",
     name: "Maps",
     icon: "nc-icon nc-pin-3",
@@ -82,6 +93,6 @@ var routes = [
     icon: "nc-icon nc-spaceship",
     component: UpgradeToPro,
     layout: "/admin"
-  }
+  } */
 ];
 export default routes;

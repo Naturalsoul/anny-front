@@ -19,6 +19,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { Nav } from "reactstrap";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 // javascript plugin used to create scrollbars on windows
 import PerfectScrollbar from "perfect-scrollbar";
 
@@ -69,7 +70,7 @@ class Sidebar extends React.Component {
             href="https://www.creative-tim.com"
             className="simple-text logo-normal"
           >
-            Creative Tim
+            Anny
           </a>
         </div>
         <div className="sidebar-wrapper" ref={this.sidebar}>
@@ -88,7 +89,7 @@ class Sidebar extends React.Component {
                     className="nav-link"
                     activeClassName="active"
                   >
-                    <i className={prop.icon} />
+                    <i><FontAwesomeIcon icon={prop.icon} /></i>
                     <p>{prop.name}</p>
                   </NavLink>
                 </li>
