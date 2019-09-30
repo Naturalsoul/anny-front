@@ -22,7 +22,7 @@ import { createBrowserHistory } from "history";
 import { Router, Route, Switch, Redirect } from "react-router-dom";
 
 import { library } from '@fortawesome/fontawesome-svg-core';
-import { faBuilding, faUsers, faEdit, faTrashAlt, faSearch, faFileInvoiceDollar } from '@fortawesome/free-solid-svg-icons';
+import { faBuilding, faUsers, faEdit, faTrashAlt, faSearch, faFileInvoiceDollar, faPlus, faSave } from '@fortawesome/free-solid-svg-icons';
 
 import "bootstrap/dist/css/bootstrap.css";
 import "assets/scss/paper-dashboard.scss?v=1.1.0";
@@ -31,14 +31,14 @@ import "perfect-scrollbar/css/perfect-scrollbar.css";
 
 import AdminLayout from "layouts/Admin.jsx";
 
-library.add(faBuilding, faUsers, faEdit, faTrashAlt, faSearch, faFileInvoiceDollar);
+library.add(faBuilding, faUsers, faEdit, faTrashAlt, faSearch, faFileInvoiceDollar, faPlus, faSave);
 const hist = createBrowserHistory();
 
 ReactDOM.render(
   <Router history={hist}>
     <Switch>
       <Route path="/admin" render={props => <AdminLayout {...props} />} />
-      <Redirect to="/admin/dashboard" />
+      <Redirect to="/admin/empresas" />
     </Switch>
   </Router>,
   document.getElementById("root")
