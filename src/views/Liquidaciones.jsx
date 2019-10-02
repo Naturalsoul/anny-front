@@ -46,8 +46,74 @@ class Liquidaciones extends React.PureComponent {
                         value: 80000,
                     },
                 ],
+                totalDesc: [
+                    {
+                        detail: 'Alcance Líquido',
+                        value: 0,
+                        disable: true,
+                    },
+                    {
+                        detail: 'Anticipos',
+                        value: 0,
+                        disable: false,
+                    },
+                    {
+                        detail: 'Saldo Líquido',
+                        value: 0,
+                        disable: true,
+                    }, 
+                ],
             }
         },
+    };
+
+    componentWillMount() {
+        for (let i = 0; i < 12; i++) {
+            this.setState(
+                prevState => ({
+                    liq: {
+                        ...prevState.liq,
+                        [i]: {
+                            detailsRemu: [
+                                {
+                                    detail: 'Sueldo Base',
+                                    value: 250000 + i,
+                                },
+                            ],
+                            descPrev: [
+                                {
+                                    detail: 'AFP 11.45% Provida',
+                                    value: 77285 + i,
+                                },
+                            ],
+                            totalRemu: [
+                                {
+                                    detail: 'Viático',
+                                    value: 80000 + i,
+                                },
+                            ],
+                            totalDesc: [
+                                {
+                                    detail: 'Alcance Líquido',
+                                    value: 0 + i,
+                                    disable: true,
+                                },
+                                {
+                                    detail: 'Anticipos',
+                                    value: 0 + i,
+                                    disable: false,
+                                },
+                                {
+                                    detail: 'Saldo Líquido',
+                                    value: 0 + i,
+                                    disable: true,
+                                },
+                            ],
+                        },
+                    },
+                })
+            );
+        };
     };
 
     toggle(index) {
@@ -63,56 +129,19 @@ class Liquidaciones extends React.PureComponent {
         );
     };
 
-    addDetail(month) {
+    addItem(field, month) {
         this.setState(
             prevState => ({
                 liq: {
+                    ...prevState.liq,
                     [month]: {
                         ...prevState.liq[month],
-                        detailsRemu: [
-                            ...prevState.liq[month].detailsRemu,
+                        [field]: [
+                            ...prevState.liq[month][field],
                             {
                                 detail: '',
                                 value: 0,
-                            }
-                        ],
-                    },
-                },
-            })
-        );
-    };
-
-    addDescPrev(month) {
-        this.setState(
-            prevState => ({
-                liq: {
-                    [month]: {
-                        ...prevState.liq[month],
-                        descPrev: [
-                            ...prevState.liq[month].descPrev,
-                            {
-                                detail: '',
-                                value: 0,
-                            }
-                        ],
-                    },
-                },
-            })
-        );
-    };
-
-    addTotalRemu(month) {
-        this.setState(
-            prevState => ({
-                liq: {
-                    [month]: {
-                        ...prevState.liq[month],
-                        totalRemu: [
-                            ...prevState.liq[month].totalRemu,
-                            {
-                                detail: '',
-                                value: 0,
-                            }
+                            },
                         ],
                     },
                 },
@@ -122,8 +151,7 @@ class Liquidaciones extends React.PureComponent {
 
     render() {
         const { nav, liq } = this.state;
-
-        console.log('liq', liq)
+        const month = nav.findIndex(e => e);
 
         return (
             <>
@@ -229,6 +257,13 @@ class Liquidaciones extends React.PureComponent {
                                         <Col>
                                             <TabContent className='px-2'>
                                                 <Row>
+                                                    <Col>
+                                                        <Button color='success' className='float-right'>
+                                                            Guardar <FontAwesomeIcon icon='save' />
+                                                        </Button>
+                                                    </Col>
+                                                </Row>
+                                                <Row>
                                                     <Col sm='12' md='6'>
                                                         <Card>
                                                             <CardHeader>
@@ -237,7 +272,12 @@ class Liquidaciones extends React.PureComponent {
                                                             <CardBody>
                                                                 <Row>
                                                                     <Col>
-                                                                        <Button className='float-right' color='success' onClick={() => this.addDetail(nav.findIndex(e => e))}>
+                                                                        <Button
+                                                                            className='float-right'
+                                                                            color='info'
+                                                                            onClick={() => this.addItem('detailsRemu', month)}
+                                                                            title='Añadir Ítem'
+                                                                        >
                                                                             <FontAwesomeIcon icon='plus' />
                                                                         </Button>
                                                                     </Col>
@@ -248,7 +288,7 @@ class Liquidaciones extends React.PureComponent {
                                                                             {
                                                                                 Object.keys(liq).map(
                                                                                     x => (
-                                                                                        liq[x].detailsRemu.map(
+                                                                                        +x === month ? liq[x].detailsRemu.map(
                                                                                             e => (
                                                                                                 <Row key={x}>
                                                                                                     <Col>
@@ -274,7 +314,7 @@ class Liquidaciones extends React.PureComponent {
                                                                                                     </Col>
                                                                                                 </Row>
                                                                                             )
-                                                                                        )
+                                                                                        ) : null
                                                                                     )
                                                                                 )
                                                                             }
@@ -288,21 +328,14 @@ class Liquidaciones extends React.PureComponent {
                                                                                 SubTotal: $ {
                                                                                     Object.keys(liq).map(
                                                                                         x => (
-                                                                                            liq[x].detailsRemu.map(e => e.value).reduce(
+                                                                                            +x === month ? liq[x].detailsRemu.map(e => e.value).reduce(
                                                                                                 (sum, current) => sum + current
-                                                                                            )
+                                                                                            ) : null
                                                                                         )
                                                                                     )
                                                                                 }
                                                                             </b>
                                                                         </FormGroup>
-                                                                    </Col>
-                                                                </Row>
-                                                                <Row>
-                                                                    <Col>
-                                                                        <Button color='success' className='float-right'>
-                                                                            Guardar <FontAwesomeIcon icon='save' />
-                                                                        </Button>
                                                                     </Col>
                                                                 </Row>
                                                             </CardBody>
@@ -316,7 +349,12 @@ class Liquidaciones extends React.PureComponent {
                                                             <CardBody>
                                                                 <Row>
                                                                     <Col>
-                                                                        <Button className='float-right' color='success' onClick={() => this.addDescPrev(nav.findIndex(e => e))}>
+                                                                        <Button
+                                                                            className='float-right'
+                                                                            color='info'
+                                                                            onClick={() => this.addItem('descPrev', month)}
+                                                                            title='Añadir Ítem'
+                                                                        >
                                                                             <FontAwesomeIcon icon='plus' />
                                                                         </Button>
                                                                     </Col>
@@ -327,7 +365,7 @@ class Liquidaciones extends React.PureComponent {
                                                                             {
                                                                                 Object.keys(liq).map(
                                                                                     x => (
-                                                                                        liq[x].descPrev.map(
+                                                                                        +x === month ? liq[x].descPrev.map(
                                                                                             e => (
                                                                                                 <Row key={x}>
                                                                                                     <Col>
@@ -353,7 +391,7 @@ class Liquidaciones extends React.PureComponent {
                                                                                                     </Col>
                                                                                                 </Row>
                                                                                             )
-                                                                                        )
+                                                                                        ) : null
                                                                                     )
                                                                                 )
                                                                             }
@@ -367,21 +405,14 @@ class Liquidaciones extends React.PureComponent {
                                                                                 SubTotal: $ {
                                                                                     Object.keys(liq).map(
                                                                                         x => (
-                                                                                            liq[x].descPrev.map(e => e.value).reduce(
+                                                                                            +x === month ? liq[x].descPrev.map(e => e.value).reduce(
                                                                                                 (sum, current) => sum + current
-                                                                                            )
+                                                                                            ) : null
                                                                                         )
                                                                                     )
                                                                                 }
                                                                             </b>
                                                                         </FormGroup>
-                                                                    </Col>
-                                                                </Row>
-                                                                <Row>
-                                                                    <Col>
-                                                                        <Button color='success' className='float-right'>
-                                                                            Guardar <FontAwesomeIcon icon='save' />
-                                                                        </Button>
                                                                     </Col>
                                                                 </Row>
                                                             </CardBody>
@@ -397,7 +428,12 @@ class Liquidaciones extends React.PureComponent {
                                                             <CardBody>
                                                                 <Row>
                                                                     <Col>
-                                                                        <Button className='float-right' color='success' onClick={() => this.addTotalRemu(nav.findIndex(e => e))}>
+                                                                        <Button
+                                                                            className='float-right'
+                                                                            color='info'
+                                                                            onClick={() => this.addItem('totalRemu', month)}
+                                                                            title='Añadir Ítem'
+                                                                        >
                                                                             <FontAwesomeIcon icon='plus' />
                                                                         </Button>
                                                                     </Col>
@@ -408,7 +444,7 @@ class Liquidaciones extends React.PureComponent {
                                                                             {
                                                                                 Object.keys(liq).map(
                                                                                     x => (
-                                                                                        liq[x].totalRemu.map(
+                                                                                        +x === month ? liq[x].totalRemu.map(
                                                                                             e => (
                                                                                                 <Row key={x}>
                                                                                                     <Col>
@@ -434,7 +470,7 @@ class Liquidaciones extends React.PureComponent {
                                                                                                     </Col>
                                                                                                 </Row>
                                                                                             )
-                                                                                        )
+                                                                                        ) : null
                                                                                     )
                                                                                 )
                                                                             }
@@ -448,9 +484,9 @@ class Liquidaciones extends React.PureComponent {
                                                                                 SubTotal: $ {
                                                                                     Object.keys(liq).map(
                                                                                         x => (
-                                                                                            liq[x].totalRemu.map(e => e.value).reduce(
+                                                                                            +x === month ? liq[x].totalRemu.map(e => e.value).reduce(
                                                                                                 (sum, current) => sum + current
-                                                                                            )
+                                                                                            ) : null
                                                                                         )
                                                                                     )
                                                                                 }
@@ -458,11 +494,90 @@ class Liquidaciones extends React.PureComponent {
                                                                         </FormGroup>
                                                                     </Col>
                                                                 </Row>
+                                                            </CardBody>
+                                                        </Card>
+                                                    </Col>
+                                                    <Col sm='12' md='6'>
+                                                        <Card>
+                                                            <CardHeader>
+                                                                <b>Total Descuentos</b>
+                                                            </CardHeader>
+                                                            <CardBody>
                                                                 <Row>
                                                                     <Col>
-                                                                        <Button color='success' className='float-right'>
-                                                                            Guardar <FontAwesomeIcon icon='save' />
+                                                                        <Button
+                                                                            className='float-right'
+                                                                            color='info'
+                                                                            onClick={() => this.addItem('totalDesc', month)}
+                                                                            title='Añadir Ítem'
+                                                                        >
+                                                                            <FontAwesomeIcon icon='plus' />
                                                                         </Button>
+                                                                    </Col>
+                                                                </Row>
+                                                                <Row>
+                                                                    <Col>
+                                                                        <Form inline>
+                                                                            {
+                                                                                Object.keys(liq).map(
+                                                                                    x => (
+                                                                                        +x === month ? liq[x].totalDesc.map(
+                                                                                            e => (
+                                                                                                <Row key={x}>
+                                                                                                    <Col>
+                                                                                                        <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
+                                                                                                            <Label for='' className='mr-sm-2' hidden>
+                                                                                                                Detalle
+                                                                                                            </Label>
+                                                                                                            <Input
+                                                                                                                type='text'
+                                                                                                                placeholder='Detalle'
+                                                                                                                value={e.detail}
+                                                                                                                disabled={e.disable}
+                                                                                                            />
+                                                                                                        </FormGroup>
+                                                                                                    </Col>
+                                                                                                    <Col>
+                                                                                                        <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
+                                                                                                            <Label for='' className='mr-sm-2' hidden>
+                                                                                                                Valor
+                                                                                                            </Label>
+                                                                                                            <InputGroup>
+                                                                                                                <InputGroupAddon addontType='prepend'>
+                                                                                                                    <InputGroupText>$</InputGroupText>
+                                                                                                                </InputGroupAddon>
+                                                                                                                <Input
+                                                                                                                    type='number'
+                                                                                                                    placeholder='Valor'
+                                                                                                                    value={e.value}
+                                                                                                                />
+                                                                                                            </InputGroup>
+                                                                                                        </FormGroup>
+                                                                                                    </Col>
+                                                                                                </Row>
+                                                                                            )
+                                                                                        ) : null
+                                                                                    )
+                                                                                )
+                                                                            }
+                                                                        </Form>
+                                                                    </Col>
+                                                                </Row>
+                                                                <Row>
+                                                                    <Col sm='12' md={{ offset: 6, size: 6 }}>
+                                                                        <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
+                                                                            <b>
+                                                                                SubTotal: $ {
+                                                                                    Object.keys(liq).map(
+                                                                                        x => (
+                                                                                            +x === month ? liq[x].totalDesc.map(e => e.value).reduce(
+                                                                                                (sum, current) => sum + current
+                                                                                            ) : null
+                                                                                        )
+                                                                                    )
+                                                                                }
+                                                                            </b>
+                                                                        </FormGroup>
                                                                     </Col>
                                                                 </Row>
                                                             </CardBody>

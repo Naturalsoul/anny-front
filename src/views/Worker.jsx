@@ -86,15 +86,14 @@ class Workers extends React.PureComponent {
                                                 <Button color='info'>Buscar <FontAwesomeIcon icon='search' /></Button>
                                             </Form>
                                         </Col>
-                                        <Col>
-                                            <Form inline>
-                                                <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
-                                                    <Label for='tableFilter' className='mr-sm-2' hidden>
-                                                        Filtrar Tabla
-                                                    </Label>
-                                                    <Input type='text' name='tableFilter' id='tableFilter' placeholder='Filtrar Tabla' style={{ marginTop: 10 }} />
-                                                </FormGroup>
-                                            </Form>
+                                        <Col sm='4' md={{ offset: 2, size: 4, }}>
+                                            <Input
+                                                type='text'
+                                                name='tableFilter'
+                                                id='tableFilter'
+                                                placeholder='Filtrar listado de trabajadores...'
+                                                className='mt-3'
+                                            />
                                         </Col>
                                     </Row>
                                     <Row>
