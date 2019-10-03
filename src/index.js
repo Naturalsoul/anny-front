@@ -20,6 +20,10 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { createBrowserHistory } from "history";
 import { Router, Route, Switch, Redirect } from "react-router-dom";
+import { ApolloProvider } from 'react-apollo';
+import { ApolloClient } from 'apollo-client';
+import { HttpLink } from 'apollo-link-http';
+import { InMemoryCache } from 'apollo-cache-inmemory';
 
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faBuilding, faUsers, faEdit, faTrashAlt, faSearch, faFileInvoiceDollar, faPlus, faSave } from '@fortawesome/free-solid-svg-icons';
@@ -34,12 +38,23 @@ import AdminLayout from "layouts/Admin.jsx";
 library.add(faBuilding, faUsers, faEdit, faTrashAlt, faSearch, faFileInvoiceDollar, faPlus, faSave);
 const hist = createBrowserHistory();
 
+const httpLink = {
+  uri: 'http://localhost:4000/graphql',
+};
+
+const client = new ApolloClient({
+  link: new HttpLink(httpLink),
+  cache: new InMemoryCache(),
+});
+
 ReactDOM.render(
-  <Router history={hist}>
-    <Switch>
-      <Route path="/admin" render={props => <AdminLayout {...props} />} />
-      <Redirect to="/admin/empresas" />
-    </Switch>
-  </Router>,
+  <ApolloProvider client={client}>
+    <Router history={hist}>
+      <Switch>
+        <Route path="/admin" render={props => <AdminLayout {...props} />} />
+        <Redirect to="/admin/empresas" />
+      </Switch>
+    </Router>
+  </ApolloProvider>,
   document.getElementById("root")
 );
