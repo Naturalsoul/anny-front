@@ -28,7 +28,7 @@ import FixedPlugin from "components/FixedPlugin/FixedPlugin.jsx";
 
 import routes from "routes.js";
 
-var ps;
+let ps;
 
 class Dashboard extends React.Component {
   constructor(props) {
