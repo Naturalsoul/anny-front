@@ -19,7 +19,10 @@ import {
     ModalFooter,
 } from 'reactstrap';
 
+import { withApollo } from 'react-apollo';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+
+import { GETCOMPANIES } from '../graphql/company';
 
 class Company extends React.PureComponent {
     state = {
@@ -52,7 +55,7 @@ class Company extends React.PureComponent {
     constructor(props) {
         super(props);
 
-        this.state = { ...this.state };
+        this.state = { ...this.state, ...props.location.state, };
 
         this.handleChange = this.handleChange.bind(this);
         this.handleSubmit = this.handleSubmit.bind(this);
@@ -123,6 +126,30 @@ class Company extends React.PureComponent {
                 ),
             })
         );
+    };
+
+    async componentWillMount() {
+        const { client } = this.props;
+        const { token } = this.state;
+
+        const { data: { getCompanies }, errors } = await client.query({
+            query: GETCOMPANIES,
+            variables: { token },
+            errorPolicy: 'all',
+        });
+
+        if (errors) {
+            console.log(errors);
+            throw errors;
+        } else {
+            this.setState(
+                prevState => ({
+                    ...prevState,
+                    companiesList: [ ...getCompanies ],
+                    filteredCompaniesList: [ ...getCompanies ],
+                })
+            );
+        }
     };
 
     render() {
@@ -492,4 +519,4 @@ class Company extends React.PureComponent {
     };
 };
 
-export default Company;
+export default withApollo(Company);

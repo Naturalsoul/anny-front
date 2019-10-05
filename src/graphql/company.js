@@ -1,8 +1,11 @@
 import gql from 'graphql-tag';
-import { graphql } from 'react-apollo';
 
-const getCompanies = gql`
-    getCompanies {
-        
+export const GETCOMPANIES = gql`
+    query getCompanies($token: String!) {
+        getCompanies(token: $token) {
+            _id,
+            rut,
+            name
+        }
     }
 `;

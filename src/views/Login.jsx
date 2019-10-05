@@ -17,6 +17,7 @@ import '../assets/css/anny.css';
 
 class Login extends React.PureComponent {
     state = {
+        token: '',
         redirect: false,
     };
 
@@ -28,9 +29,8 @@ class Login extends React.PureComponent {
         this.handleGoogleLogin = this.handleGoogleLogin.bind(this);
     };
 
-    async handleGoogleLogin(args/* { error, profileObj: { name, imageUrl, email }, tokenId, accessToken, googleId } */) {
-        console.log(args)
-        /* if (error) {
+    async handleGoogleLogin({ error, profileObj: { name, imageUrl, email }, googleId }) {
+        if (error) {
             console.log('error google login:', error);
             throw error;
         } else {
@@ -42,28 +42,29 @@ class Login extends React.PureComponent {
                     email,
                     name,
                     avatar: imageUrl,
-                    tokenId,
-                    accessToken,
                     googleId,
                 },
                 errorPolicy: 'all',
             });
 
             if (errors) {
+                console.log(errors);
                 throw errors;
             } else {
+                
                 this.setState({
+                    token: doLogin,
                     redirect: true,
                 });
             }
-        } */
+        }
     };
 
     render() {
-        const { redirect } = this.state;
+        const { redirect, token } = this.state;
 
-        if (redirect) {
-            return <Redirect to='/admin/empresas' />;
+        if (redirect && token) {
+            return <Redirect to={{ pathname: '/admin/empresas', state: { token } }} />;
         } else {
             return (
                 <div className='blur-background'>
