@@ -17,7 +17,31 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 class Workers extends React.PureComponent {
+    state = {
+        token: '',
+        addWorker: {
+            company: '',
+            name: '',
+            rut: '',
+            date_from: new Date(),
+        },
+    };
+
+    constructor(props) {
+        super(props);
+
+        this.state = { ...this.state, token: props.token, };
+    };
+
+    handleChange(e) {
+        this.setState(e);
+    };
+
     render() {
+        const {
+            addWorker,
+        } = this.state;
+
         return (
             <>
                 <div className='content'>
@@ -33,8 +57,25 @@ class Workers extends React.PureComponent {
                                             <Label for='company' className='mr-sm-2' hidden>
                                                 Empresa
                                             </Label>
-                                            <Input type='select' name='company' id='company' placeholder='Seleccione una Empresa'>
-                                                <option value='' disabled selected>Seleccione una Empresa</option>
+                                            <Input
+                                                type='select'
+                                                name='company'
+                                                id='company'
+                                                placeholder='Seleccione una Empresa'
+                                                value={addWorker.company}
+                                                onChange={
+                                                    ({ target }) => this.setState(
+                                                        prevState => ({
+                                                            ...prevState,
+                                                            addWorker: {
+                                                                ...prevState.addWorker,
+                                                                company: target.value.toString(),
+                                                            },
+                                                        })
+                                                    )
+                                                }
+                                            >
+                                                <option value='' disabled>Seleccione una Empresa</option>
                                                 <option value='11.111.111-1'>Empresa de Prueba - 11.111.111-1</option>
                                             </Input>
                                         </FormGroup>
@@ -78,8 +119,14 @@ class Workers extends React.PureComponent {
                                                     <Label for='company2' className='mr-sm-2' hidden>
                                                         Empresa
                                                     </Label>
-                                                    <Input type='select' name='company2' id='company2' placeholder='Seleccione una Empresa'>
-                                                        <option value='' disabled selected>Seleccione una Empresa</option>
+                                                    <Input
+                                                        type='select'
+                                                        name='company2'
+                                                        id='company2'
+                                                        placeholder='Seleccione una Empresa'
+                                                        value=''
+                                                    >
+                                                        <option value='' disabled>Seleccione una Empresa</option>
                                                         <option value='11.111.111-1'>Empresa de Prueba - 11.111.111-1</option>
                                                     </Input>
                                                 </FormGroup>
@@ -98,7 +145,7 @@ class Workers extends React.PureComponent {
                                     </Row>
                                     <Row>
                                         <Col>
-                                            <Table hover>
+                                            <Table hover responsive>
                                                 <thead>
                                                     <tr>
                                                         <th scope='row'>

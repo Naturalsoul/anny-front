@@ -22,7 +22,7 @@ import {
 import { withApollo } from 'react-apollo';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
-import { GETCOMPANIES } from '../graphql/company';
+import { GETCOMPANIES, SAVECOMPANY, UPDATECOMPANY, CHANGESTATUSCOMPANY } from '../graphql/company';
 
 class Company extends React.PureComponent {
     state = {
@@ -31,6 +31,7 @@ class Company extends React.PureComponent {
             rut: '',
         },
         editCompany: {
+            _id: '',
             name: '',
             rut: '',
         },
@@ -49,7 +50,7 @@ class Company extends React.PureComponent {
         filterTable: '',
         error: '',
         modalEdit: false,
-        modalDelete: false,
+        modalDeactivate: false,
     };
 
     constructor(props) {
@@ -66,10 +67,34 @@ class Company extends React.PureComponent {
         this.setState(e);
     };
 
-    handleSubmit(e) {
+    async handleUpdate(e) {
+        const { client } = this.props;
+        const { editCompany: { _id, name, rut }, token } = this.state;
+
+        const { errors } = await client.mutate({
+            mutation: UPDATECOMPANY,
+            variables: {
+                _id,
+                name,
+                rut,
+                token
+            },
+            errorPolicy: 'all',
+        });
+
+        if (errors) {
+            console.log(errors);
+            throw errors;
+        } else {
+            this.setState(e);
+        }
+    };
+
+    async handleSubmit(e) {
         e.preventDefault();
 
-        const { companiesList } = this.state;
+        const { client } = this.props;
+        const { companiesList, token } = this.state;
         const { companyName, companyRut } = e.target;
 
         if (companiesList.filter(e => e.rut === companyRut.value).length) {
@@ -87,6 +112,43 @@ class Company extends React.PureComponent {
                 })
             );
         } else {
+            const { data: { saveCompany }, errors } = await client.mutate({
+                mutation: SAVECOMPANY,
+                variables: {
+                    name: companyName.value.toString(),
+                    rut: companyRut.value.toString(),
+                    token,
+                },
+                errorPolicy: 'all',
+            });
+
+            if (errors) {
+                console.log(errors);
+                throw errors;
+            } else {
+                try {
+                    const data = client.readQuery({
+                        query: GETCOMPANIES,
+                        variables: { token }
+                    });
+
+                    data.getCompanies.push({
+                        _id: saveCompany,
+                        name: companyName.value.toString(),
+                        rut: companyRut.value.toString(),
+                    });
+
+                    client.writeQuery({
+                        query: GETCOMPANIES,
+                        variables: { token },
+                        data,
+                    });
+                } catch (e) {
+                    console.log(e);
+                    throw e;
+                }
+            }
+
             this.setState(
                 prevState => ({
                     ...prevState,
@@ -112,6 +174,29 @@ class Company extends React.PureComponent {
                     error: '',
                 })
             );
+        }
+    };
+
+    async handleActivation(setState, _id, rut, active) {
+        const { client } = this.props;
+        const { token } = this.state;
+
+        const { errors } = await client.mutate({
+            mutation: CHANGESTATUSCOMPANY,
+            variables: {
+                token,
+                _id,
+                rut,
+                active,
+            },
+            errorPolicy: 'all',
+        });
+
+        if (errors) {
+            console.log(errors);
+            throw errors;
+        } else {
+            this.setState(setState);
         }
     };
 
@@ -153,7 +238,7 @@ class Company extends React.PureComponent {
     };
 
     render() {
-        const { addCompany, editCompany, filteredCompaniesList, filterTable, modalEdit, modalDelete, error } = this.state;
+        const { addCompany, editCompany, filteredCompaniesList, filterTable, modalEdit, modalDeactivate, error } = this.state;
 
         return (
             <>
@@ -275,7 +360,7 @@ class Company extends React.PureComponent {
                                     </Row>
                                     <Row>
                                         <Col>
-                                            <Table hover>
+                                            <Table hover responsive>
                                                 <thead>
                                                     <tr>
                                                         <th>
@@ -293,7 +378,12 @@ class Company extends React.PureComponent {
                                                     {
                                                         filteredCompaniesList.map(
                                                             e => (
-                                                                <tr key={e.rut}>
+                                                                <tr
+                                                                    key={e.rut}
+                                                                    className={
+                                                                        e.active ? '' : 'not-active'
+                                                                    }
+                                                                >
                                                                     <th>
                                                                         {e.rut}
                                                                     </th>
@@ -309,6 +399,7 @@ class Company extends React.PureComponent {
                                                                                         prevState => ({
                                                                                             ...prevState,
                                                                                             editCompany: {
+                                                                                                _id: e._id,
                                                                                                 name: e.name,
                                                                                                 rut: e.rut,
                                                                                             },
@@ -316,6 +407,7 @@ class Company extends React.PureComponent {
                                                                                         })
                                                                                     )
                                                                                 }
+                                                                                title='Actualizar Empresa'
                                                                             >
                                                                                 <FontAwesomeIcon className='text-warning' size='lg' icon='edit' />
                                                                             </Button>
@@ -393,7 +485,7 @@ class Company extends React.PureComponent {
                                                                                     <Button
                                                                                         color='primary'
                                                                                         onClick={
-                                                                                            () => this.handleChange(
+                                                                                            () => this.handleUpdate(
                                                                                                 prevState => ({
                                                                                                     ...prevState,
                                                                                                     companiesList: prevState.companiesList.map(
@@ -432,19 +524,30 @@ class Company extends React.PureComponent {
                                                                                     () => this.handleChange(
                                                                                         prevState => ({
                                                                                             ...prevState,
-                                                                                            modalDelete: true,
+                                                                                            modalDeactivate: true,
                                                                                         })
                                                                                     )
                                                                                 }
+                                                                                title={
+                                                                                    e.active ? 'Desactivar Empresa' : 'Activar Empresa'
+                                                                                }
                                                                             >
-                                                                                <FontAwesomeIcon className='text-danger' size='lg' icon='trash-alt' />
+                                                                                <FontAwesomeIcon
+                                                                                    className={
+                                                                                        e.active ? 'text-danger' : 'text-success'
+                                                                                    }
+                                                                                    size='lg'
+                                                                                    icon={
+                                                                                        e.active ? 'minus-circle' : 'plus-circle'
+                                                                                    }
+                                                                                />
                                                                             </Button>
                                                                             <Modal
-                                                                                isOpen={modalDelete}
+                                                                                isOpen={modalDeactivate}
                                                                                 toggle={
                                                                                     () => this.handleChange(
                                                                                         prevState => ({
-                                                                                            modalDelete: !prevState.modalDelete,
+                                                                                            modalDeactivate: !prevState.modalDeactivate,
                                                                                         })
                                                                                     )
                                                                                 }
@@ -458,39 +561,99 @@ class Company extends React.PureComponent {
                                                                                         )
                                                                                     }
                                                                                 >
-                                                                                    Eliminar Empresa
+                                                                                    {
+                                                                                        e.active ?
+                                                                                            'Desactivar Empresa'
+                                                                                        :
+                                                                                            'Activar Empresa'
+                                                                                    }
                                                                                 </ModalHeader>
                                                                                 <ModalBody>
                                                                                     <Row>
                                                                                         <Col>
                                                                                             <p>
-                                                                                                ¿Está seguro de <b className='text-danger'>ELIMINAR</b> esta empresa? Esto también <b>eliminará a todos los trabajadores asociados a esta empresa y el historial de trabajo</b>.
+                                                                                                {
+                                                                                                    e.active ?
+                                                                                                        (
+                                                                                                            <>
+                                                                                                                ¿Está seguro de <b className='text-danger'>DESACTIVAR</b> esta empresa? Esto <b>también desactivará a todos los trabajadores asociados a esta empresa</b>.
+                                                                                                            </>
+                                                                                                        )
+                                                                                                    :
+                                                                                                        (
+                                                                                                            <>
+                                                                                                                ¿Está seguro de <b className='text-success'>ACTIVAR</b> esta empresa? Esto <b>también activará a todos los trabajadores asociados a esta empresa</b>.
+                                                                                                            </>
+                                                                                                        )
+                                                                                                }
                                                                                             </p>
                                                                                         </Col>
                                                                                     </Row>
                                                                                 </ModalBody>
                                                                                 <ModalFooter>
-                                                                                    <Button
-                                                                                        color='danger'
-                                                                                        onClick={
-                                                                                            () => this.handleChange(
-                                                                                                prevState => ({
-                                                                                                    ...prevState,
-                                                                                                    companiesList: prevState.companiesList.filter(x => x.rut !== e.rut),
-                                                                                                    filteredCompaniesList: prevState.filteredCompaniesList.filter(x => x.rut !== e.rut),
-                                                                                                    modalDelete: false,
-                                                                                                })
-                                                                                            )
-                                                                                        }
-                                                                                    >
-                                                                                        Eliminar
-                                                                                    </Button> {' '}
+                                                                                    {
+                                                                                        e.active ?
+                                                                                        (
+                                                                                            <Button
+                                                                                                color='danger'
+                                                                                                onClick={
+                                                                                                    () => this.handleActivation(
+                                                                                                        prevState => ({
+                                                                                                            ...prevState,
+                                                                                                            companiesList: prevState.companiesList.map(x => {
+                                                                                                                if (x._id === e._id) x.active = false;
+                                                                                                                return x;
+                                                                                                            }),
+                                                                                                            filteredCompaniesList: prevState.filteredCompaniesList.map(x => {
+                                                                                                                if (x._id === e._id) x.active = false;
+                                                                                                                return x;
+                                                                                                            }),
+                                                                                                            modalDeactivate: false,
+                                                                                                        }),
+                                                                                                        e._id,
+                                                                                                        e.rut,
+                                                                                                        false
+                                                                                                    )
+                                                                                                }
+                                                                                            >
+                                                                                                Desactivar
+                                                                                            </Button>
+                                                                                        )
+                                                                                        :
+                                                                                        (
+                                                                                            <Button
+                                                                                                color='success'
+                                                                                                onClick={
+                                                                                                    () => this.handleActivation(
+                                                                                                        prevState => ({
+                                                                                                            ...prevState,
+                                                                                                            companiesList: prevState.companiesList.map(x => {
+                                                                                                                if (x._id === e._id) x.active = true;
+                                                                                                                return x;
+                                                                                                            }),
+                                                                                                            filteredCompaniesList: prevState.filteredCompaniesList.map(x => {
+                                                                                                                if (x._id === e._id) x.active = true;
+                                                                                                                return x;
+                                                                                                            }),
+                                                                                                            modalDeactivate: false,
+                                                                                                        }),
+                                                                                                        e._id,
+                                                                                                        e.rut,
+                                                                                                        true
+                                                                                                    )
+                                                                                                }
+                                                                                            >
+                                                                                                Activar
+                                                                                            </Button>
+                                                                                        )
+                                                                                    }
+                                                                                    {' '}
                                                                                     <Button
                                                                                         color='link'
                                                                                         onClick={
                                                                                             () => this.handleChange(
                                                                                                 prevState => ({
-                                                                                                    modalDelete: !prevState.modalDelete,
+                                                                                                    modalDeactivate: !prevState.modalDeactivate,
                                                                                                 })
                                                                                             )
                                                                                         }

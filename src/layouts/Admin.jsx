@@ -35,7 +35,9 @@ class Dashboard extends React.Component {
     super(props);
     this.state = {
       backgroundColor: "black",
-      activeColor: "info"
+      activeColor: "info",
+      //token: props.location.state.token,
+      token: props.location.state ? props.location.state.token : 'dev', // dev value
     };
     this.mainPanel = React.createRef();
   }
@@ -64,6 +66,8 @@ class Dashboard extends React.Component {
     this.setState({ backgroundColor: color });
   };
   render() {
+    const { token } = this.state;
+
     return (
       <div className="wrapper">
         <Sidebar
@@ -79,7 +83,7 @@ class Dashboard extends React.Component {
               return (
                 <Route
                   path={prop.layout + prop.path}
-                  component={prop.component}
+                  render={props => <prop.component { ...props } token={token} />}
                   key={key}
                 />
               );

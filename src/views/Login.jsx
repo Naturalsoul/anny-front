@@ -27,36 +27,37 @@ class Login extends React.PureComponent {
         this.state = { ...this.state };
 
         this.handleGoogleLogin = this.handleGoogleLogin.bind(this);
+        this.handleGoogleLoginError = this.handleGoogleLoginError.bind(this);
     };
 
-    async handleGoogleLogin({ error, profileObj: { name, imageUrl, email }, googleId }) {
-        if (error) {
-            console.log('error google login:', error);
-            throw error;
+    handleGoogleLoginError({ error }) {
+        console.log('google login error:', error);
+        throw error;
+    };
+
+    async handleGoogleLogin({ profileObj: { name, imageUrl, email }, googleId }) {
+        const { client } = this.props;
+
+        const { data: { doLogin }, errors } = await client.query({
+            query: DOLOGIN,
+            variables: {
+                email,
+                name,
+                avatar: imageUrl,
+                googleId,
+            },
+            errorPolicy: 'all',
+        });
+
+        if (errors) {
+            console.log(errors);
+            throw errors;
         } else {
-            const { client } = this.props;
-
-            const { data: { doLogin }, errors } = await client.query({
-                query: DOLOGIN,
-                variables: {
-                    email,
-                    name,
-                    avatar: imageUrl,
-                    googleId,
-                },
-                errorPolicy: 'all',
+            
+            this.setState({
+                token: doLogin,
+                redirect: true,
             });
-
-            if (errors) {
-                console.log(errors);
-                throw errors;
-            } else {
-                
-                this.setState({
-                    token: doLogin,
-                    redirect: true,
-                });
-            }
         }
     };
 
@@ -82,7 +83,7 @@ class Login extends React.PureComponent {
                                     clientId='952083819906-s3sut4bghs9f1op2lq9u40tni2me4gca.apps.googleusercontent.com'
                                     buttonText='Iniciar Sesión con Google'
                                     onSuccess={this.handleGoogleLogin}
-                                    onFailure={this.handleGoogleLogin}
+                                    onFailure={this.handleGoogleLoginError}
                                     render={
                                         props => (
                                             <Button

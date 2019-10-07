@@ -32,3 +32,13 @@
     -moz-box-shadow: 0px 2px 5px 0px rgba(0,0,0,0.4);
     box-shadow: 0px 2px 5px 0px rgba(0,0,0,0.4);
 }
+
+.not-active {
+    background-color: rgba(75,0,0,.1);
+}
+
+@media screen and (max-width: 540px) {
+    .center-box {
+        width: 90%;
+    }
+}

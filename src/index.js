@@ -26,7 +26,21 @@ import { HttpLink } from 'apollo-link-http';
 import { InMemoryCache } from 'apollo-cache-inmemory';
 
 import { library } from '@fortawesome/fontawesome-svg-core';
-import { faBuilding, faUsers, faEdit, faTrashAlt, faSearch, faFileInvoiceDollar, faPlus, faSave, faEnvelope } from '@fortawesome/free-solid-svg-icons';
+import {
+  faBuilding,
+  faUsers,
+  faEdit,
+  faTrashAlt,
+  faSearch,
+  faFileInvoiceDollar,
+  faPlus,
+  faSave,
+  faEnvelope,
+  faCog,
+  faSignOutAlt,
+  faMinusCircle,
+  faPlusCircle,
+} from '@fortawesome/free-solid-svg-icons';
 
 import "bootstrap/dist/css/bootstrap.css";
 import "assets/scss/paper-dashboard.scss?v=1.1.0";
@@ -36,7 +50,21 @@ import "perfect-scrollbar/css/perfect-scrollbar.css";
 import AdminLayout from "layouts/Admin.jsx";
 import Login from "views/Login";
 
-library.add(faBuilding, faUsers, faEdit, faTrashAlt, faSearch, faFileInvoiceDollar, faPlus, faSave, faEnvelope);
+library.add(
+  faBuilding,
+  faUsers,
+  faEdit,
+  faTrashAlt,
+  faSearch,
+  faFileInvoiceDollar,
+  faPlus,
+  faSave,
+  faEnvelope,
+  faCog,
+  faSignOutAlt,
+  faMinusCircle,
+  faPlusCircle,
+);
 const hist = createBrowserHistory();
 
 const httpLink = {
