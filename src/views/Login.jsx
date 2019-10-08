@@ -10,6 +10,7 @@ import { withApollo } from 'react-apollo';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { GoogleLogin } from 'react-google-login';
 import { Redirect } from 'react-router';
+import Alerts from '../components/Alerts/Alerts';
 
 import { DOLOGIN } from '../graphql/login';
 
@@ -32,7 +33,12 @@ class Login extends React.PureComponent {
 
     handleGoogleLoginError({ error }) {
         console.log('google login error:', error);
-        throw error;
+        Alerts({
+            type: 'error',
+            title: 'Error al Ingresar',
+            description: 'No se pudo iniciar sesión. Si quiere ingresar, deje que la ventana de ingreso se cierre por si misma.',
+            error,
+        });
     };
 
     async handleGoogleLogin({ profileObj: { name, imageUrl, email }, googleId }) {
@@ -51,9 +57,12 @@ class Login extends React.PureComponent {
 
         if (errors) {
             console.log(errors);
-            throw errors;
-        } else {
-            
+            Alerts({
+                type: 'error',
+                title: 'Error al ingresar',
+                error: errors,
+            });
+        } else {            
             this.setState({
                 token: doLogin,
                 redirect: true,

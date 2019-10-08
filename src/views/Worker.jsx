@@ -15,6 +15,9 @@ import {
 } from 'reactstrap';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import DatePicker from 'react-datepicker';
+
+import "react-datepicker/dist/react-datepicker.css";
 
 class Workers extends React.PureComponent {
     state = {
@@ -41,6 +44,8 @@ class Workers extends React.PureComponent {
         const {
             addWorker,
         } = this.state;
+
+        console.log('addWorker', addWorker)
 
         return (
             <>
@@ -83,16 +88,65 @@ class Workers extends React.PureComponent {
                                             <Label for='workerName' className='mr-sm-2' hidden>
                                                 Nombre
                                             </Label>
-                                            <Input type='text' name='workerName' id='workerName' placeholder='Nombre' />
+                                            <Input
+                                                type='text'
+                                                name='workerName'
+                                                id='workerName'
+                                                placeholder='Nombre'
+                                                value={addWorker.name}
+                                                onChange={
+                                                    ({ target }) => this.setState(
+                                                        prevState => ({
+                                                            addWorker: {
+                                                                ...prevState.addWorker,
+                                                                name: target.value.toString(),
+                                                            },
+                                                        })
+                                                    )
+                                                }
+                                            />
                                         </FormGroup>
                                         <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
                                             <Label for='workerRut' className='mr-sm-2' hidden>
                                                 Rut
                                             </Label>
-                                            <Input type='text' name='workerRut' id='workerRut' placeholder='Rut' />
+                                            <Input
+                                                type='text'
+                                                name='workerRut'
+                                                id='workerRut'
+                                                placeholder='Rut'
+                                                value={addWorker.rut}
+                                                onChange={
+                                                    ({ target }) => this.setState(
+                                                        prevState => ({
+                                                            addWorker: {
+                                                                ...prevState.addWorker,
+                                                                rut: target.value.toString(),
+                                                            },
+                                                        })
+                                                    )
+                                                }
+                                            />
                                         </FormGroup>
                                         <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
-                                            <Input type='date' name='workerFromDate' id='workerFromDate' placeholder='Desde' />
+                                            <DatePicker
+                                                name='workerFromDate'
+                                                id='workerFromDate'
+                                                placeholder='Desde'
+                                                selected={addWorker.date_from}
+                                                className='form-control'
+                                                dateFormat='dd-MM-yyyy'
+                                                onChange={
+                                                    date => {console.log(date);this.setState(
+                                                        prevState => ({
+                                                            addWorker: {
+                                                                ...prevState.addWorker,
+                                                                date_from: date,
+                                                            },
+                                                        })
+                                                    )}
+                                                }
+                                            />
                                             <Label for='workerFromDate' className='ml-sm-2'>
                                                 Desde
                                             </Label>

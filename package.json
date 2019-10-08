@@ -18,6 +18,7 @@
     "react": "16.8.6",
     "react-apollo": "^3.1.2",
     "react-chartjs-2": "2.7.6",
+    "react-datepicker": "^2.9.6",
     "react-dom": "16.8.6",
     "react-google-login": "^5.0.5",
     "react-google-maps": "9.4.5",
@@ -25,7 +26,9 @@
     "react-router": "5.0.0",
     "react-router-dom": "5.0.0",
     "react-scripts": "3.0.1",
-    "reactstrap": "8.0.0"
+    "reactstrap": "8.0.0",
+    "sweetalert2": "^8.18.1",
+    "sweetalert2-react-content": "^1.1.0"
   },
   "scripts": {
     "start": "react-scripts start",
