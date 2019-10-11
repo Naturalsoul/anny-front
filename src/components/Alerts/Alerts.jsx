@@ -10,9 +10,8 @@ export default ({
     error,
     description = (
         <>
-            Hubo un problema al intentar ingresar con Google. Favor de intentar de nuevo más tarde. Si el
-            error persiste, envie una captura de pantalla de esta ventana junto a una reseña de lo que estaba haciendo
-            al momento de que esta advertencia apareciera.
+            Favor de intentar de nuevo más tarde. Si el error persiste, envie una captura de pantalla de esta
+            ventana junto a una reseña de lo que estaba haciendo al momento de que esta advertencia apareciera.
         </>
     ),
     colors = '#0DA694'

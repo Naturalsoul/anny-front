@@ -39,10 +39,12 @@ import {
 } from "reactstrap";
 
 import { withApollo } from 'react-apollo';
+import { withCookies } from 'react-cookie';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import routes from "routes.js";
 import { GoogleLogout } from "react-google-login";
+import Alerts from "components/Alerts/Alerts";
 
 class Header extends React.Component {
   constructor(props) {
@@ -108,6 +110,8 @@ class Header extends React.Component {
   }
 
   handleLogout() {
+    const { cookies } = this.props;
+    cookies.remove('token');
     this.setState({
       token: null,
     });
@@ -115,7 +119,11 @@ class Header extends React.Component {
 
   handleLogoutError({ error }) {
     console.log('google logout error:', error);
-    throw error;
+    Alerts({
+      type: 'error',
+      title: 'Error al Cerrar Sesión',
+      error,
+    });
   };
 
   componentDidMount() {
@@ -270,4 +278,4 @@ class Header extends React.Component {
   }
 }
 
-export default withApollo(Header);
+export default withCookies(withApollo(Header));

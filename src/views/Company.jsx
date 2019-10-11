@@ -20,6 +20,7 @@ import {
 } from 'reactstrap';
 
 import { withApollo } from 'react-apollo';
+import { withCookies } from 'react-cookie';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Alerts from '../components/Alerts/Alerts';
 
@@ -57,13 +58,13 @@ class Company extends React.PureComponent {
         error: '',
         modalEdit: false,
         modalDeactivate: false,
+        token: '',
     };
 
     constructor(props) {
         super(props);
-
-        this.state = { ...this.state, ...props.location.state, };
-
+        const { cookies } = props;
+        this.state = { ...this.state, token: cookies.get('token') || '' };
         this.handleChange = this.handleChange.bind(this);
         this.handleSubmit = this.handleSubmit.bind(this);
         this.handleFilter = this.handleFilter.bind(this);
@@ -757,4 +758,4 @@ class Company extends React.PureComponent {
     };
 };
 
-export default withApollo(Company);
+export default withCookies(withApollo(Company));

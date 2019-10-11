@@ -6,6 +6,7 @@ import {
     Button
 } from 'reactstrap';
 
+import { withCookies } from 'react-cookie';
 import { withApollo } from 'react-apollo';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { GoogleLogin } from 'react-google-login';
@@ -42,7 +43,7 @@ class Login extends React.PureComponent {
     };
 
     async handleGoogleLogin({ profileObj: { name, imageUrl, email }, googleId }) {
-        const { client } = this.props;
+        const { client, cookies } = this.props;
 
         const { data: { doLogin }, errors } = await client.query({
             query: DOLOGIN,
@@ -62,7 +63,8 @@ class Login extends React.PureComponent {
                 title: 'Error al ingresar',
                 error: errors,
             });
-        } else {            
+        } else {
+            cookies.set('token', doLogin, { path: '/' });
             this.setState({
                 token: doLogin,
                 redirect: true,
@@ -115,4 +117,4 @@ class Login extends React.PureComponent {
     };
 };
 
-export default withApollo(Login);
+export default withCookies(withApollo(Login));

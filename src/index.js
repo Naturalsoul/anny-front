@@ -24,6 +24,7 @@ import { ApolloProvider } from 'react-apollo';
 import { ApolloClient } from 'apollo-client';
 import { HttpLink } from 'apollo-link-http';
 import { InMemoryCache } from 'apollo-cache-inmemory';
+import { CookiesProvider } from 'react-cookie';
 
 import { library } from '@fortawesome/fontawesome-svg-core';
 import {
@@ -77,14 +78,16 @@ const client = new ApolloClient({
 });
 
 ReactDOM.render(
-  <ApolloProvider client={client}>
-    <Router history={hist}>
-      <Switch>
-        <Route path='/login' component={Login} exact />
-        <Route path="/admin" render={props => <AdminLayout {...props} />} />
-        <Redirect to="/login" />
-      </Switch>
-    </Router>
-  </ApolloProvider>,
+  <CookiesProvider>
+    <ApolloProvider client={client}>
+      <Router history={hist}>
+        <Switch>
+          <Route path='/login' component={Login} exact />
+          <Route path="/admin" render={props => <AdminLayout {...props} />} />
+          <Redirect to="/login" />
+        </Switch>
+      </Router>
+    </ApolloProvider>
+  </CookiesProvider>,
   document.getElementById("root")
 );
