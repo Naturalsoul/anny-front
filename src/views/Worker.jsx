@@ -17,7 +17,10 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { withCookies } from 'react-cookie';
 import { withApollo } from 'react-apollo';
+import moment from 'moment';
 import DatePicker from 'react-datepicker';
+import Select from 'react-select';
+import makeAnimated from 'react-select/animated';
 
 import { GETCOMPANIES } from '../graphql/company';
 import { GETWORKERS, SAVEWORKER } from '../graphql/worker';
@@ -29,7 +32,6 @@ class Workers extends React.PureComponent {
     state = {
         token: '',
         addWorker: {
-            company: '',
             name: '',
             rut: '',
             from_date: new Date(),
@@ -78,8 +80,10 @@ class Workers extends React.PureComponent {
         e.preventDefault();
 
         const { client } = this.props;
-        const { token, filteredWorkersList } = this.state;
-        const { company, workerName, workerRut, workerFromDate } = e.target;
+        const { token, filteredWorkersList, filteredCompany } = this.state;
+        const { workerName, workerRut, workerFromDate } = e.target;
+        const fromDateArr = workerFromDate.value.toString().split('-');
+        const fromDate = new Date(fromDateArr[2], +fromDateArr[1] - 1, fromDateArr[0]);
 
         if (filteredWorkersList.filter(e => workerRut.value.toString() === e.rut).length) {
             Alerts({
@@ -88,65 +92,100 @@ class Workers extends React.PureComponent {
                 description: `El RUT ${workerRut.value} ya se encuentra registrado por otro trabajador.`,
             });
         } else {
-            const { errors } = await client.mutate({
+            const { data: { saveWorker }, errors } = await client.mutate({
                 mutation: SAVEWORKER,
                 variables: {
                     token,
+                    company: filteredCompany.value.toString(),
                     name: workerName.value.toString(),
                     rut: workerRut.value.toString(),
-                    from_date: workerFromDate.value,
+                    from_date: fromDate,
                 },
                 errorPolicy: 'all',
             });
 
             if (errors) Alerts({ type: 'error', title: 'Error al registrar al trabajador.', error: errors });
             else {
-                this.setState(
-                    prevState => ({
-                        filteredCompany: company,
-                        addWorker: {
-                            company: '',
-                            name: '',
-                            rut: '',
-                            from_date: new Date(),
-                        },
-                    })
-                );
+                try {
+                    const data = client.readQuery({
+                        query: GETWORKERS,
+                        variables: {
+                            token,
+                            _id: filteredCompany.value.toString(),
+                        }
+                    });
 
-                this.handleGetWorkers();
+                    data.getWorkers.push({
+                        _id: saveWorker,
+                        company: filteredCompany.value.toString(),
+                        name: workerName.value.toString(),
+                        rut: workerRut.value.toString(),
+                        from_date: fromDate,
+                    });
+
+                    console.log('data', data);
+
+                    client.writeQuery({
+                        query: GETWORKERS,
+                        variables: { token, _id: filteredCompany.value.toString() },
+                        data
+                    });
+
+                    Alerts({ type: 'success', title: 'Trabajador registrado', description: '', });
+                    this.setState(
+                        prevState => ({
+                            addWorker: {
+                                name: '',
+                                rut: '',
+                                from_date: new Date(),
+                            },
+                        })
+                    );
+                } catch (e) {
+                    console.log('error saving worker: ', e);
+                    Alerts({ type: 'error', title: 'Error al registrar el trabajador', error: e });
+                }
             }
         }
     };
 
-    async handleGetWorkers() {
+    async handleGetWorkers(filteredCompany) {
         const { client } = this.props;
-        const { filteredCompany, token } = this.state;
+        const { token } = this.state;
 
-        const { data: { getWorkers }, errors } = await client.query({
-            query: GETWORKERS,
-            variables: {
-                token,
-                _id: filteredCompany,
-            },
-            errorPolicy: 'all',
-        });
-
-        if (errors) Alerts({ type: 'error', title: 'Error al obtener los trabajadores', error: errors });
-        else {
-            this.setState({
-                workersList: getWorkers.map(
-                    e => ({
-                        ...e,
-                        company: `${e.company.name} - ${e.company.rut}`
-                    })
-                ),
-                filteredWorkersList: getWorkers.map(
-                    e => ({
-                        ...e,
-                        company: `${e.company.name} - ${e.company.rut}`
-                    })
-                ),
+        if (filteredCompany) {
+            const { data: { getWorkers }, errors } = await client.query({
+                query: GETWORKERS,
+                variables: {
+                    token,
+                    _id: filteredCompany.value.toString(),
+                },
+                errorPolicy: 'all',
             });
+
+            if (errors) Alerts({ type: 'error', title: 'Error al obtener los trabajadores', error: errors });
+            else {
+                this.setState(
+                    prevState => ({
+                        ...prevState,
+                        filteredCompany: filteredCompany,
+                        workersList: getWorkers.map(
+                            e => ({
+                                ...e,
+                                company: `${e.company.name} - ${e.company.rut}`
+                            })
+                        ),
+                        filteredWorkersList: getWorkers.map(
+                            e => ({
+                                ...e,
+                                company: `${e.company.name} - ${e.company.rut}`
+                            })
+                        ),
+                    })
+                );
+            }
+        } else {
+            this.setState({ filteredCompany: '' })
         }
     };
 
@@ -187,240 +226,220 @@ class Workers extends React.PureComponent {
                         <Col>
                             <Card>
                                 <CardHeader>
-                                    <b>Agregar Trabajador</b>
+                                    <b>Seleccionar Empresa</b>
                                 </CardHeader>
                                 <CardBody>
-                                    <Form onSubmit={this.handleSaveWorker} inline>
-                                        <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
-                                            <Label for='company' className='mr-sm-2' hidden>
-                                                Empresa
-                                            </Label>
-                                            <Input
-                                                type='select'
-                                                name='company'
-                                                id='company'
-                                                placeholder='Seleccione una Empresa'
-                                                value={addWorker.company}
-                                                onChange={
-                                                    ({ target }) => this.setState(
-                                                        prevState => ({
-                                                            ...prevState,
-                                                            addWorker: {
-                                                                ...prevState.addWorker,
-                                                                company: target.value.toString(),
-                                                            },
-                                                        })
-                                                    )
-                                                }
-                                            >
-                                                <option value='' disabled>Seleccione una Empresa</option>
-                                                {
+                                    <Row>
+                                        <Col sm='6'>
+                                            <Select
+                                                autoFocus
+                                                isClearable
+                                                components={makeAnimated()}
+                                                value={filteredCompany}
+                                                placeholder='Seleccione una Empresa...'
+                                                options={
                                                     companiesList.map(
-                                                        e => (
-                                                            <option value={e._id} key={e._id}>
-                                                                { e.name } - { e.rut }
-                                                            </option>
-                                                        )
+                                                        e => ({ value: e._id, label: `${e.name} - ${e.rut}`, })
                                                     )
                                                 }
-                                            </Input>
-                                        </FormGroup>
-                                        <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
-                                            <Label for='workerName' className='mr-sm-2' hidden>
-                                                Nombre
-                                            </Label>
-                                            <Input
-                                                type='text'
-                                                name='workerName'
-                                                id='workerName'
-                                                placeholder='Nombre'
-                                                value={addWorker.name}
-                                                onChange={
-                                                    ({ target }) => this.setState(
-                                                        prevState => ({
-                                                            addWorker: {
-                                                                ...prevState.addWorker,
-                                                                name: target.value.toString(),
-                                                            },
-                                                        })
-                                                    )
-                                                }
+                                                onChange={this.handleGetWorkers}
                                             />
-                                        </FormGroup>
-                                        <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
-                                            <Label for='workerRut' className='mr-sm-2' hidden>
-                                                Rut
-                                            </Label>
-                                            <Input
-                                                type='text'
-                                                name='workerRut'
-                                                id='workerRut'
-                                                placeholder='Rut'
-                                                value={addWorker.rut}
-                                                onChange={
-                                                    ({ target }) => this.setState(
-                                                        prevState => ({
-                                                            addWorker: {
-                                                                ...prevState.addWorker,
-                                                                rut: target.value.toString(),
-                                                            },
-                                                        })
-                                                    )
-                                                }
-                                            />
-                                        </FormGroup>
-                                        <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
-                                            <DatePicker
-                                                name='workerFromDate'
-                                                id='workerFromDate'
-                                                placeholder='Desde'
-                                                selected={addWorker.from_date}
-                                                className='form-control'
-                                                dateFormat='dd-MM-yyyy'
-                                                onChange={
-                                                    date => {console.log(date);this.setState(
-                                                        prevState => ({
-                                                            addWorker: {
-                                                                ...prevState.addWorker,
-                                                                from_date: date,
-                                                            },
-                                                        })
-                                                    )}
-                                                }
-                                            />
-                                            <Label for='workerFromDate' className='ml-sm-2'>
-                                                Desde
-                                            </Label>
-                                        </FormGroup>
-                                        <Button
-                                            color='success'
-                                        >
-                                            Registrar Trabajador
-                                        </Button>
-                                    </Form>
+                                        </Col>
+                                    </Row>
                                 </CardBody>
                             </Card>
                         </Col>
                     </Row>
-                    <Row>
-                        <Col>
-                            <Card>
-                                <CardHeader>
-                                    <b>
-                                        Listado de Trabajadores
-                                    </b>
-                                </CardHeader>
-                                <CardBody>
-                                    <Row>
-                                        <Col sm='8' md='6' lg='6'>
-                                            <Form inline>
-                                                <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
-                                                    <Label for='company2' className='mr-sm-2' hidden>
-                                                        Empresa
-                                                    </Label>
-                                                    <Input
-                                                        type='select'
-                                                        name='company2'
-                                                        id='company2'
-                                                        placeholder='Seleccione una Empresa'
-                                                        value={filteredCompany}
-                                                        onChange={
-                                                            ({ target }) => this.handleChange({
-                                                                filteredCompany: target.value.toString(),
-                                                            })
-                                                        }
-                                                    >
-                                                        <option value='' disabled>Seleccione una Empresa</option>
-                                                        {
-                                                            companiesList.map(
-                                                                e => (
-                                                                    <option value={e._id} key={e.rut}>
-                                                                        { e.name } - { e.rut }
-                                                                    </option>
-                                                                )
-                                                            )
-                                                        }
-                                                    </Input>
-                                                </FormGroup>
-                                                <Button color='info'>Buscar <FontAwesomeIcon icon='search' /></Button>
-                                            </Form>
-                                        </Col>
-                                        <Col sm='4' md={{ offset: 2, size: 4, }}>
-                                            <Input
-                                                type='text'
-                                                name='tableFilter'
-                                                id='tableFilter'
-                                                placeholder='Filtrar listado de trabajadores...'
-                                                className='mt-3'
-                                                value={filterTable}
-                                                onChange={this.handleFilter}
-                                            />
-                                        </Col>
-                                    </Row>
-                                    <Row>
-                                        <Col>
-                                            <Table hover responsive>
-                                                <thead>
-                                                    <tr>
-                                                        <th scope='row'>
-                                                            Rut
-                                                        </th>
-                                                        <td>
+                    {
+                        filteredCompany ?
+                            <>
+                                <Row>
+                                    <Col>
+                                        <Card>
+                                            <CardHeader>
+                                                <b>Agregar Trabajador</b>
+                                            </CardHeader>
+                                            <CardBody>
+                                                <Form onSubmit={this.handleSaveWorker} inline>
+                                                    <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
+                                                        <Label for='workerName' className='mr-sm-2' hidden>
                                                             Nombre
-                                                        </td>
-                                                        <td>
-                                                            Empresa
-                                                        </td>
-                                                        <td>
+                                                        </Label>
+                                                        <Input
+                                                            required
+                                                            type='text'
+                                                            name='workerName'
+                                                            id='workerName'
+                                                            placeholder='Nombre'
+                                                            value={addWorker.name}
+                                                            onChange={
+                                                                ({ target }) => this.setState(
+                                                                    prevState => ({
+                                                                        addWorker: {
+                                                                            ...prevState.addWorker,
+                                                                            name: target.value.toString(),
+                                                                        },
+                                                                    })
+                                                                )
+                                                            }
+                                                        />
+                                                    </FormGroup>
+                                                    <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
+                                                        <Label for='workerRut' className='mr-sm-2' hidden>
+                                                            Rut
+                                                        </Label>
+                                                        <Input
+                                                            required
+                                                            type='text'
+                                                            name='workerRut'
+                                                            id='workerRut'
+                                                            placeholder='Rut'
+                                                            value={addWorker.rut}
+                                                            onChange={
+                                                                ({ target }) => this.setState(
+                                                                    prevState => ({
+                                                                        addWorker: {
+                                                                            ...prevState.addWorker,
+                                                                            rut: target.value.toString(),
+                                                                        },
+                                                                    })
+                                                                )
+                                                            }
+                                                        />
+                                                    </FormGroup>
+                                                    <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
+                                                        <DatePicker
+                                                            required
+                                                            name='workerFromDate'
+                                                            id='workerFromDate'
+                                                            placeholder='Desde'
+                                                            selected={addWorker.from_date}
+                                                            className='form-control'
+                                                            dateFormat='dd-MM-yyyy'
+                                                            onChange={
+                                                                date => {
+                                                                    console.log(date); this.setState(
+                                                                        prevState => ({
+                                                                            addWorker: {
+                                                                                ...prevState.addWorker,
+                                                                                from_date: date,
+                                                                            },
+                                                                        })
+                                                                    )
+                                                                }
+                                                            }
+                                                        />
+                                                        <Label for='workerFromDate' className='ml-sm-2'>
                                                             Desde
-                                                        </td>
-                                                        <td>
-                                                            Hasta
-                                                        </td>
-                                                        <td>
-                                                            Acciones
-                                                        </td>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {
-                                                        filteredWorkersList.map(
-                                                            e => (
-                                                                <tr key={e._id}>
+                                                        </Label>
+                                                    </FormGroup>
+                                                    <Row>
+                                                        <Col>
+                                                            <Button
+                                                                color='success'
+                                                            >
+                                                                Registrar Trabajador
+                                                            </Button>
+                                                        </Col>
+                                                    </Row>
+                                                </Form>
+                                            </CardBody>
+                                        </Card>
+                                    </Col>
+                                </Row>
+                                <Row>
+                                    <Col>
+                                        <Card>
+                                            <CardHeader>
+                                                <b>
+                                                    Listado de Trabajadores
+                                                </b>
+                                            </CardHeader>
+                                            <CardBody>
+                                                <Row className='pb-2'>
+                                                    <Col sm='4' md={{ offset: 8, size: 4, }}>
+                                                        <Input
+                                                            type='text'
+                                                            name='tableFilter'
+                                                            id='tableFilter'
+                                                            placeholder='Filtrar listado de trabajadores...'
+                                                            className='mt-3 form-control'
+                                                            value={filterTable}
+                                                            onChange={this.handleFilter}
+                                                        />
+                                                    </Col>
+                                                </Row>
+                                                <Row>
+                                                    <Col>
+                                                        <Table hover responsive>
+                                                            <thead>
+                                                                <tr>
+                                                                    <th scope='row'>
+                                                                        Rut
+                                                                    </th>
                                                                     <td>
-                                                                        { e.rut }
+                                                                        Nombre
                                                                     </td>
                                                                     <td>
-                                                                        { e.name } 
+                                                                        Empresa
                                                                     </td>
                                                                     <td>
-                                                                        { e.company }
+                                                                        Desde
                                                                     </td>
                                                                     <td>
-                                                                        { new Date(e.from_date).toLocaleDateString() }
+                                                                        Hasta
                                                                     </td>
                                                                     <td>
-                                                                        <ButtonGroup>
-                                                                            <Button className='btn btn-link'>
-                                                                                <FontAwesomeIcon className='text-warning' size='lg' icon='edit' />
-                                                                            </Button>
-                                                                            <Button className='btn btn-link'>
-                                                                                <FontAwesomeIcon className='text-danger' size='lg' icon='trash-alt' />
-                                                                            </Button>
-                                                                        </ButtonGroup>
+                                                                        Acciones
                                                                     </td>
                                                                 </tr>
-                                                            )
-                                                        )
-                                                    }
-                                                </tbody>
-                                            </Table>
-                                        </Col>
-                                    </Row>
-                                </CardBody>
-                            </Card>
-                        </Col>
-                    </Row>
+                                                            </thead>
+                                                            <tbody>
+                                                                {
+                                                                    filteredWorkersList.map(
+                                                                        e => (
+                                                                            <tr key={e._id}>
+                                                                                <td>
+                                                                                    {e.rut}
+                                                                                </td>
+                                                                                <td>
+                                                                                    {e.name}
+                                                                                </td>
+                                                                                <td>
+                                                                                    {e.company}
+                                                                                </td>
+                                                                                <td>
+                                                                                    {moment(e.from_date).format('DD-MM-YYYY')}
+                                                                                </td>
+                                                                                <td>
+                                                                                    {e.to_date ? moment(e.to_date).format('DD-MM-YYYY') : '-' }
+                                                                                </td>
+                                                                                <td>
+                                                                                    <ButtonGroup>
+                                                                                        <Button className='btn btn-link'>
+                                                                                            <FontAwesomeIcon className='text-warning' size='lg' icon='edit' />
+                                                                                        </Button>
+                                                                                        <Button className='btn btn-link'>
+                                                                                            <FontAwesomeIcon className='text-danger' size='lg' icon='trash-alt' />
+                                                                                        </Button>
+                                                                                    </ButtonGroup>
+                                                                                </td>
+                                                                            </tr>
+                                                                        )
+                                                                    )
+                                                                }
+                                                            </tbody>
+                                                        </Table>
+                                                    </Col>
+                                                </Row>
+                                            </CardBody>
+                                        </Card>
+                                    </Col>
+                                </Row>
+                            </>
+                        :
+                            null
+                    }
                 </div>
             </>
         );
