@@ -72,6 +72,15 @@ class Login extends React.PureComponent {
         }
     };
 
+    componentWillMount() {
+        const { cookies } = this.props;
+        const token = cookies.get('token') || '';
+
+        console.log('token login', token)
+
+        if (token) this.setState({ redirect: true, token });
+    };
+
     render() {
         const { redirect, token } = this.state;
 

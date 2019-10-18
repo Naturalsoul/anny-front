@@ -21,3 +21,9 @@ export const SAVEWORKER = gql`
         saveWorker(token: $token, company: $company, name: $name, rut: $rut, from_date: $from_date)
     }
 `;
+
+export const UPDATEWORKER = gql`
+    mutation updateWorker($token: String!, $_id: String!, $name: String!, $rut: String!, $from_date: Date!, $to_date: Date) {
+        updateWorker(token: $token, _id: $_id, name: $name, rut: $rut, from_date: $from_date, to_date: $to_date)
+    }
+`;

@@ -37,6 +37,13 @@
     background-color: rgba(75,0,0,.1);
 }
 
+.full-date-input,
+.full-date-input > div.react-datepicker-wrapper,
+.full-date-input > div > div.react-datepicker__input-container
+.full-date-input > div > div.react-datepicker__input-container input {
+    width: 100%;
+}
+
 @media screen and (max-width: 540px) {
     .center-box {
         width: 90%;

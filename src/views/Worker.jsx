@@ -11,19 +11,25 @@ import {
     ButtonGroup,
     Table,
     Col,
-    Row
+    Row,
+    Modal,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
+    Spinner,
 } from 'reactstrap';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { withCookies } from 'react-cookie';
 import { withApollo } from 'react-apollo';
+import { Redirect } from 'react-router';
 import moment from 'moment';
 import DatePicker from 'react-datepicker';
 import Select from 'react-select';
 import makeAnimated from 'react-select/animated';
 
 import { GETCOMPANIES } from '../graphql/company';
-import { GETWORKERS, SAVEWORKER } from '../graphql/worker';
+import { GETWORKERS, SAVEWORKER, UPDATEWORKER } from '../graphql/worker';
 
 import "react-datepicker/dist/react-datepicker.css";
 import Alerts from 'components/Alerts/Alerts';
@@ -36,11 +42,21 @@ class Workers extends React.PureComponent {
             rut: '',
             from_date: new Date(),
         },
+        editWorker: {
+            _id: '',
+            rut: '',
+            name: '',
+            company: '',
+            from_date: new Date(),
+            to_date: '',
+        },
         filteredCompany: '',
         filterTable: '',
         companiesList: [],
         workersList: [],
         filteredWorkersList: [],
+        modalEdit: false,
+        loadingWorkers: false,
     };
 
     constructor(props) {
@@ -48,11 +64,27 @@ class Workers extends React.PureComponent {
 
         const { cookies } = props;
 
-        this.state = { ...this.state, token: cookies.get('token'), };
+        this.state = { ...this.state, token: cookies.get('token') || '', };
         this.handleChange = this.handleChange.bind(this);
         this.handleFilter = this.handleFilter.bind(this);
         this.handleGetWorkers = this.handleGetWorkers.bind(this);
         this.handleSaveWorker = this.handleSaveWorker.bind(this);
+    };
+
+    async handleUpdate(setState) {
+        const { token, editWorker: { _id, name, rut, from_date, to_date } } = this.state;
+        const { client } = this.props;
+
+        const { errors } = await client.mutate({
+            mutation: UPDATEWORKER,
+            variables: { token, _id, name, rut, from_date, to_date },
+            errorPolicy: 'all',
+        });
+
+        if (errors) Alerts({ type: 'error', title: 'Error al actualizar el trabajador', error: errors[0].message });
+        else {
+            this.setState(setState);
+        }
     };
 
     handleChange(e) {
@@ -80,7 +112,7 @@ class Workers extends React.PureComponent {
         e.preventDefault();
 
         const { client } = this.props;
-        const { token, filteredWorkersList, filteredCompany } = this.state;
+        const { token, filteredWorkersList, filteredCompany, companiesList, } = this.state;
         const { workerName, workerRut, workerFromDate } = e.target;
         const fromDateArr = workerFromDate.value.toString().split('-');
         const fromDate = new Date(fromDateArr[2], +fromDateArr[1] - 1, fromDateArr[0]);
@@ -104,10 +136,10 @@ class Workers extends React.PureComponent {
                 errorPolicy: 'all',
             });
 
-            if (errors) Alerts({ type: 'error', title: 'Error al registrar al trabajador.', error: errors });
+            if (errors) Alerts({ type: 'error', title: 'Error al registrar al trabajador.', error: errors[0].message });
             else {
                 try {
-                    const data = client.readQuery({
+                    const data = await client.readQuery({
                         query: GETWORKERS,
                         variables: {
                             token,
@@ -115,36 +147,39 @@ class Workers extends React.PureComponent {
                         }
                     });
 
+                    const company = companiesList.filter(e => e._id === filteredCompany.value.toString());
+
                     data.getWorkers.push({
                         _id: saveWorker,
-                        company: filteredCompany.value.toString(),
+                        /* company: {
+                            _id: company._id,
+                            name: company.name,
+                            rut: company.rut,
+                        }, */
                         name: workerName.value.toString(),
                         rut: workerRut.value.toString(),
                         from_date: fromDate,
+                        to_date: null,
                     });
-
-                    console.log('data', data);
 
                     client.writeQuery({
                         query: GETWORKERS,
                         variables: { token, _id: filteredCompany.value.toString() },
                         data
                     });
-
-                    Alerts({ type: 'success', title: 'Trabajador registrado', description: '', });
-                    this.setState(
-                        prevState => ({
-                            addWorker: {
-                                name: '',
-                                rut: '',
-                                from_date: new Date(),
-                            },
-                        })
-                    );
                 } catch (e) {
                     console.log('error saving worker: ', e);
                     Alerts({ type: 'error', title: 'Error al registrar el trabajador', error: e });
                 }
+
+                Alerts({ type: 'success', title: 'Trabajador registrado', description: '', });
+                this.setState({
+                    addWorker: {
+                        name: '',
+                        rut: '',
+                        from_date: new Date(),
+                    },
+                });
             }
         }
     };
@@ -154,6 +189,8 @@ class Workers extends React.PureComponent {
         const { token } = this.state;
 
         if (filteredCompany) {
+            this.setState({ loadingWorkers: true, });
+
             const { data: { getWorkers }, errors } = await client.query({
                 query: GETWORKERS,
                 variables: {
@@ -163,8 +200,10 @@ class Workers extends React.PureComponent {
                 errorPolicy: 'all',
             });
 
-            if (errors) Alerts({ type: 'error', title: 'Error al obtener los trabajadores', error: errors });
-            else {
+            if (errors) {
+                Alerts({ type: 'error', title: 'Error al obtener los trabajadores', error: errors[0].message });
+                this.setState({ loadingWorkers: false, });
+            } else {
                 this.setState(
                     prevState => ({
                         ...prevState,
@@ -181,6 +220,7 @@ class Workers extends React.PureComponent {
                                 company: `${e.company.name} - ${e.company.rut}`
                             })
                         ),
+                        loadingWorkers: false,
                     })
                 );
             }
@@ -217,7 +257,13 @@ class Workers extends React.PureComponent {
             filterTable,
             filteredWorkersList,
             companiesList,
+            modalEdit,
+            editWorker,
+            loadingWorkers,
+            token,
         } = this.state;
+
+        if (!token) return <Redirect to={{ pathname: '/admin/empresas', state: { token } }} />;
 
         return (
             <>
@@ -416,12 +462,31 @@ class Workers extends React.PureComponent {
                                                                                 </td>
                                                                                 <td>
                                                                                     <ButtonGroup>
-                                                                                        <Button className='btn btn-link'>
+                                                                                        <Button
+                                                                                            title='Actualizar Trabajador'
+                                                                                            className='btn btn-link'
+                                                                                            onClick={
+                                                                                                () => this.handleChange(
+                                                                                                    prevState => ({
+                                                                                                        ...prevState,
+                                                                                                        editWorker: {
+                                                                                                            _id: e._id,
+                                                                                                            name: e.name,
+                                                                                                            rut: e.rut,
+                                                                                                            company: e.company,
+                                                                                                            from_date: new Date(e.from_date),
+                                                                                                            to_date: e.to_date ? new Date(e.to_date) : '',
+                                                                                                        },
+                                                                                                        modalEdit: !prevState.modalEdit,
+                                                                                                    })
+                                                                                                )
+                                                                                            }
+                                                                                        >
                                                                                             <FontAwesomeIcon className='text-warning' size='lg' icon='edit' />
                                                                                         </Button>
-                                                                                        <Button className='btn btn-link'>
+                                                                                        {/* <Button className='btn btn-link'>
                                                                                             <FontAwesomeIcon className='text-danger' size='lg' icon='trash-alt' />
-                                                                                        </Button>
+                                                                                        </Button> */}
                                                                                     </ButtonGroup>
                                                                                 </td>
                                                                             </tr>
@@ -436,9 +501,172 @@ class Workers extends React.PureComponent {
                                         </Card>
                                     </Col>
                                 </Row>
+                                <Modal
+                                    isOpen={modalEdit}
+                                    toggle={
+                                        () => this.handleChange(
+                                            prevState => ({
+                                                modalEdit: !prevState.modalEdit,
+                                            })
+                                        )
+                                    }
+                                >
+                                    <ModalHeader
+                                        toggle={
+                                            () => this.handleChange(
+                                                prevState => ({
+                                                    modalEdit: !prevState.modalEdit,
+                                                })
+                                            )
+                                        }
+                                    >
+                                        Actualizar Trabajador
+                                    </ModalHeader>
+                                    <ModalBody>
+                                        <Form>
+                                            <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
+                                                <Label for='workerNameEdit' className='mb-0'>
+                                                    Nombre
+                                                </Label>
+                                                <Input
+                                                    required
+                                                    value={editWorker.name}
+                                                    className='mb-2'
+                                                    type='text'
+                                                    name='workerNameEdit'
+                                                    id='workerNameEdit'
+                                                    placeholder='Nombre del Trabajador'
+                                                    onChange={
+                                                        ({ target }) => this.handleChange(
+                                                            prevState => ({
+                                                                editWorker: {
+                                                                    ...prevState.editWorker,
+                                                                    name: target.value,
+                                                                },
+                                                            })
+                                                        )
+                                                    }
+                                                />
+                                            </FormGroup>
+                                            <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
+                                                <Label for='workerRutEdit' className='mb-0'>
+                                                    Rut
+                                                </Label>
+                                                <Input
+                                                    value={editWorker.rut}
+                                                    className='mb-2'
+                                                    type='text'
+                                                    name='workerRutEdit'
+                                                    id='workerRutEdit'
+                                                    placeholder='Rut del Trabajador'
+                                                    disabled
+                                                />
+                                            </FormGroup>
+                                            <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
+                                                <Label for='workerCompanyEdit' className='mb-0'>
+                                                    Empresa
+                                                </Label>
+                                                <Input
+                                                    value={editWorker.company}
+                                                    className='mb-2'
+                                                    type='text'
+                                                    name='workerCompanyEdit'
+                                                    id='workerCompanyEdit'
+                                                    placeholder='Empresa'
+                                                    disabled
+                                                />
+                                            </FormGroup>
+                                            <FormGroup className='mb-2 mr-sm-2 mb-sm-0 full-date-input'>
+                                                <Label for='workerFromDateEdit' className='mb-0'>
+                                                    Desde
+                                                </Label>
+                                                <br />
+                                                <DatePicker
+                                                    required                                                            
+                                                    name='workerFromDateEdit'
+                                                    id='workerFromDateEdit'
+                                                    placeholderText='Desde'
+                                                    selected={editWorker.from_date}
+                                                    className='form-control mb-2'
+                                                    dateFormat='dd-MM-yyyy'
+                                                    onChange={
+                                                        date => this.handleChange(
+                                                            prevState => ({
+                                                                editWorker: {
+                                                                    ...prevState.editWorker,
+                                                                    from_date: date,
+                                                                },
+                                                            })
+                                                        )
+                                                    }
+                                                />
+                                            </FormGroup>
+                                            <FormGroup className='mb-2 mr-sm-2 mb-sm-0 full-date-input'>
+                                                <Label for='workerToDateEdit' className='mb-0'>
+                                                    Hasta
+                                                </Label>
+                                                <br />
+                                                <DatePicker
+                                                    name='workerToDateEdit'
+                                                    id='workerToDateEdit'
+                                                    placeholderText='Fecha de término del trabajador'
+                                                    selected={editWorker.to_date}
+                                                    className='form-control mb-2'
+                                                    dateFormat='dd-MM-yyyy'
+                                                    onChange={
+                                                        date => this.handleChange(
+                                                            prevState => ({
+                                                                editWorker: {
+                                                                    ...prevState.editWorker,
+                                                                    to_date: date,
+                                                                },
+                                                            })
+                                                        )
+                                                    }
+                                                />
+                                            </FormGroup>
+                                        </Form>
+                                    </ModalBody>
+                                    <ModalFooter>
+                                        <Button
+                                            color='primary'
+                                            onClick={
+                                                () => this.handleUpdate(
+                                                    prevState => ({
+                                                        ...prevState,
+                                                        companiesList: prevState.companiesList.map(
+                                                            y => {
+                                                                if (y.rut === editWorker.rut) {
+                                                                    y.name = editWorker.name;
+                                                                }
+
+                                                                return y;
+                                                            }
+                                                        ),
+                                                        modalEdit: false,
+                                                    })
+                                                )
+                                            }
+                                        >
+                                            Actualizar
+                                        </Button> {' '}
+                                        <Button
+                                            color='link'
+                                            onClick={
+                                                () => this.handleChange(
+                                                    prevState => ({
+                                                        modalEdit: !prevState.modalEdit,
+                                                    })
+                                                )
+                                            }
+                                        >
+                                            Cancelar
+                                        </Button>
+                                    </ModalFooter>
+                                </Modal>
                             </>
                         :
-                            null
+                            loadingWorkers ? <Spinner color='info' /> : null
                     }
                 </div>
             </>
