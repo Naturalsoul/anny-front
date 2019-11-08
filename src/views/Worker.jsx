@@ -69,21 +69,103 @@ class Workers extends React.PureComponent {
         this.handleFilter = this.handleFilter.bind(this);
         this.handleGetWorkers = this.handleGetWorkers.bind(this);
         this.handleSaveWorker = this.handleSaveWorker.bind(this);
+        this.handleUpdate = this.handleUpdate.bind(this);
     };
 
-    async handleUpdate(setState) {
-        const { token, editWorker: { _id, name, rut, from_date, to_date } } = this.state;
+    async handleUpdate() {
+        const {
+            token,
+            editWorker: { _id, name, rut, from_date, to_date },
+            filteredCompany,
+        } = this.state;
         const { client } = this.props;
 
-        const { errors } = await client.mutate({
-            mutation: UPDATEWORKER,
-            variables: { token, _id, name, rut, from_date, to_date },
-            errorPolicy: 'all',
-        });
-
-        if (errors) Alerts({ type: 'error', title: 'Error al actualizar el trabajador', error: errors[0].message });
+        if (!name) Alerts({ type: 'error', title: 'Error al Actualizar', description: 'Debe ingresar un Nombre' });
+        else if (!from_date) Alerts({ type: 'error', title: 'Error al Actualizar', description: 'Debe ingresar una "Fecha Desde".' });
         else {
-            this.setState(setState);
+            const { errors } = await client.mutate({
+                mutation: UPDATEWORKER,
+                variables: { token, _id, name, rut, from_date, to_date },
+                errorPolicy: 'all',
+            });
+
+            if (errors) Alerts({ type: 'error', title: 'Error al actualizar el trabajador', error: errors[0].message });
+            else {
+                try {
+                    const data = await client.readQuery({
+                        query: GETWORKERS,
+                        variables: { token, _id: filteredCompany.value.toString() }
+                    })
+
+                    data.getWorkers = data.getWorkers.map(
+                        e => {
+                            if (e._id === _id) {
+                                e = {
+                                    ...e,
+                                    name,
+                                    from_date,
+                                    to_date,
+                                }
+                            }
+
+                            return e;
+                        }
+                    );
+
+                    client.writeQuery({
+                        query: GETWORKERS,
+                        variables: { token, _id: filteredCompany.value.toString() },
+                        data,
+                    });
+                } catch (e) {
+                    console.log('error updating worker: ', e);
+                    Alerts({ type: 'Error', title: 'Error al actualizar el trabajador', error: e });
+                }
+
+                this.setState(
+                    prevState => ({
+                        modalEdit: false,
+                        editWorker: {
+                            _id: '',
+                            rut: '',
+                            name: '',
+                            company: '',
+                            from_date: new Date(),
+                            to_date: '',
+                        },
+                        workersList: prevState.workersList.map(
+                            e => {
+                                if (e._id === _id) {
+                                    e = {
+                                        ...e,
+                                        name,
+                                        from_date,
+                                        to_date,
+                                    };
+                                }
+
+                                return e;
+                            }
+                        ),
+                        filteredWorkersList: prevState.filteredWorkersList.map(
+                            e => {
+                                if (e._id === _id) {
+                                    e = {
+                                        ...e,
+                                        name,
+                                        from_date,
+                                        to_date,
+                                    };
+                                }
+
+                                return e;
+                            }
+                        ),
+                    })
+                );
+
+                Alerts({ type: 'success', title: 'Se actualizó el trabajador', description: '' });
+            }
         }
     };
 
@@ -116,6 +198,7 @@ class Workers extends React.PureComponent {
         const { workerName, workerRut, workerFromDate } = e.target;
         const fromDateArr = workerFromDate.value.toString().split('-');
         const fromDate = new Date(fromDateArr[2], +fromDateArr[1] - 1, fromDateArr[0]);
+        const company = companiesList.filter(e => e._id === filteredCompany.value.toString())[0];
 
         if (filteredWorkersList.filter(e => workerRut.value.toString() === e.rut).length) {
             Alerts({
@@ -147,19 +230,18 @@ class Workers extends React.PureComponent {
                         }
                     });
 
-                    const company = companiesList.filter(e => e._id === filteredCompany.value.toString());
-
                     data.getWorkers.push({
                         _id: saveWorker,
-                        /* company: {
-                            _id: company._id,
+                        company: {
                             name: company.name,
                             rut: company.rut,
-                        }, */
+                            __typename: 'Company'
+                        },
                         name: workerName.value.toString(),
                         rut: workerRut.value.toString(),
                         from_date: fromDate,
                         to_date: null,
+                        __typename: 'Worker',
                     });
 
                     client.writeQuery({
@@ -172,14 +254,41 @@ class Workers extends React.PureComponent {
                     Alerts({ type: 'error', title: 'Error al registrar el trabajador', error: e });
                 }
 
+                this.setState(
+                    prevState => ({
+                        addWorker: {
+                            name: '',
+                            rut: '',
+                            from_date: new Date(),
+                        },
+                        workersList: [
+                            ...prevState.workersList,
+                            {
+                                _id: saveWorker,
+                                company: `${company.name} - ${company.rut}`,
+                                name: workerName.value.toString(),
+                                rut: workerRut.value.toString(),
+                                from_date: fromDate,
+                                to_date: null,
+                                __typename: 'Worker',
+                            }
+                        ],
+                        filteredWorkersList: [
+                            ...prevState.filteredWorkersList,
+                            {
+                                _id: saveWorker,
+                                company: `${company.name} - ${company.rut}`,
+                                name: workerName.value.toString(),
+                                rut: workerRut.value.toString(),
+                                from_date: fromDate,
+                                to_date: null,
+                                __typename: 'Worker',
+                            }
+                        ]
+                    })
+                );
+
                 Alerts({ type: 'success', title: 'Trabajador registrado', description: '', });
-                this.setState({
-                    addWorker: {
-                        name: '',
-                        rut: '',
-                        from_date: new Date(),
-                    },
-                });
             }
         }
     };
@@ -231,7 +340,7 @@ class Workers extends React.PureComponent {
 
     async componentDidMount() {
         const { client } = this.props;
-        const { token } = this.state; 
+        const { token } = this.state;
 
         const { data: { getCompanies }, errors } = await client.query({
             query: GETCOMPANIES,
@@ -246,7 +355,7 @@ class Workers extends React.PureComponent {
                 error: errors[0].message,
             });
         } else {
-            this.setState({ companiesList: [ ...getCompanies ] });
+            this.setState({ companiesList: [...getCompanies] });
         }
     };
 
@@ -262,8 +371,6 @@ class Workers extends React.PureComponent {
             loadingWorkers,
             token,
         } = this.state;
-
-        if (!token) return <Redirect to={{ pathname: '/admin/empresas', state: { token } }} />;
 
         return (
             <>
@@ -444,7 +551,15 @@ class Workers extends React.PureComponent {
                                                                 {
                                                                     filteredWorkersList.map(
                                                                         e => (
-                                                                            <tr key={e._id}>
+                                                                            <tr key={e._id} className={
+                                                                                e.to_date ?
+                                                                                    new Date(e.from_date) > new Date(e.to_date) ?
+                                                                                        'not-active'
+                                                                                    :
+                                                                                        ''
+                                                                                :
+                                                                                    ''
+                                                                            }>
                                                                                 <td>
                                                                                     {e.rut}
                                                                                 </td>
@@ -582,7 +697,8 @@ class Workers extends React.PureComponent {
                                                 </Label>
                                                 <br />
                                                 <DatePicker
-                                                    required                                                            
+                                                    required
+                                                    maxDate={ editWorker.to_date ? new Date(editWorker.to_date) : null }
                                                     name='workerFromDateEdit'
                                                     id='workerFromDateEdit'
                                                     placeholderText='Desde'
@@ -607,6 +723,8 @@ class Workers extends React.PureComponent {
                                                 </Label>
                                                 <br />
                                                 <DatePicker
+                                                    required
+                                                    minDate={ editWorker.from_date ? new Date(editWorker.from_date) : null }
                                                     name='workerToDateEdit'
                                                     id='workerToDateEdit'
                                                     placeholderText='Fecha de término del trabajador'
@@ -630,23 +748,7 @@ class Workers extends React.PureComponent {
                                     <ModalFooter>
                                         <Button
                                             color='primary'
-                                            onClick={
-                                                () => this.handleUpdate(
-                                                    prevState => ({
-                                                        ...prevState,
-                                                        companiesList: prevState.companiesList.map(
-                                                            y => {
-                                                                if (y.rut === editWorker.rut) {
-                                                                    y.name = editWorker.name;
-                                                                }
-
-                                                                return y;
-                                                            }
-                                                        ),
-                                                        modalEdit: false,
-                                                    })
-                                                )
-                                            }
+                                            onClick={this.handleUpdate}
                                         >
                                             Actualizar
                                         </Button> {' '}
