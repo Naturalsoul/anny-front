@@ -22,7 +22,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { withCookies } from 'react-cookie';
 import { withApollo } from 'react-apollo';
-import { Redirect } from 'react-router';
+
 import moment from 'moment';
 import DatePicker from 'react-datepicker';
 import Select from 'react-select';

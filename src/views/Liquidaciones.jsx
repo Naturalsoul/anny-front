@@ -17,14 +17,30 @@ import {
     InputGroup,
     InputGroupAddon,
     InputGroupText,
+    Spinner,
     Col,
     Row
 } from 'reactstrap';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { withCookies } from 'react-cookie';
+import { withApollo } from 'react-apollo';
+import { Redirect } from 'react-router';
+
+import Select from 'react-select';
+import makeAnimated from 'react-select/animated';
+
+import { GETCOMPANIES } from '../graphql/company';
+import { GETWORKERS } from '../graphql/worker';
+import Alerts from 'components/Alerts/Alerts';
 
 class Liquidaciones extends React.PureComponent {
     state = {
+        companiesList: [],
+        workersList: [],
+        filteredCompany: '',
+        filteredWorker: '',
+        loadingWorkers: false,
         nav: [true, false, false, false, false, false, false, false, false, false, false, false],
         liq: {
             0: {
@@ -67,7 +83,30 @@ class Liquidaciones extends React.PureComponent {
         },
     };
 
-    componentWillMount() {
+    constructor(props) {
+        super(props);
+
+        const { cookies } = props;
+
+        this.state = { ...this.state, token: cookies.get('token') || '',  };
+
+        this.handleGetWorkers = this.handleGetWorkers.bind(this);
+        this.handleGetLiquidaciones = this.handleGetLiquidaciones.bind(this);
+    };
+
+    async componentWillMount() {
+        const { client } = this.props;
+        const { token } = this.state;
+
+        const { data: { getCompanies }, errors } = await client.query({
+            query: GETCOMPANIES,
+            variables: { token },
+            errorPolicy: 'all',
+        });
+
+        if (errors) Alerts({ type: 'error', title: 'Error al obtener el listado de empresas', error: errors[0].message, });
+        else this.setState({ companiesList: [ ...getCompanies ], });
+
         for (let i = 0; i < 12; i++) {
             this.setState(
                 prevState => ({
@@ -116,6 +155,48 @@ class Liquidaciones extends React.PureComponent {
         };
     };
 
+    async handleGetWorkers(filteredCompany) {
+        const { client } = this.props;
+        const { token } = this.state;
+
+        if (!filteredCompany) this.setState({ filteredCompany: '' });
+        else {
+            this.setState({ loadingWorkers: true, });
+
+            const { data: { getWorkers }, errors } = await client.query({
+                query: GETWORKERS,
+                variables: {
+                    token,
+                    _id: filteredCompany.value.toString(),
+                },
+                errorPolicy: 'all',
+            });
+
+            if (errors) {
+                Alerts({ type: 'error', title: 'Error al obtener los trabajadores', error: errors[0].message });
+                this.setState({ loadingWorkers: false, });
+            } else {
+                this.setState(
+                    prevState => ({
+                        ...prevState,
+                        filteredCompany: filteredCompany,
+                        workersList: getWorkers.map(
+                            e => ({
+                                ...e,
+                                company: `${e.company.name} - ${e.company.rut}`
+                            })
+                        ),
+                        loadingWorkers: false,
+                    })
+                );
+            }
+        }
+    };
+
+    handleGetLiquidaciones({ value }) {
+        console.log('handleGetLiquidaciones', value);
+    }
+
     toggle(index) {
         this.setState(
             prevState => ({
@@ -150,8 +231,19 @@ class Liquidaciones extends React.PureComponent {
     };
 
     render() {
-        const { nav, liq } = this.state;
+        const {
+            nav,
+            liq,
+            filteredCompany,
+            filteredWorker, 
+            workersList,
+            companiesList,
+            loadingWorkers,
+            token
+        } = this.state;
         const month = nav.findIndex(e => e);
+
+        if (!token) return <Redirect to={{ pathname: '/login', state: { token } }} />;
 
         return (
             <>
@@ -164,14 +256,50 @@ class Liquidaciones extends React.PureComponent {
                                 </CardHeader>
                                 <CardBody>
                                     <Form inline>
-                                        <FormGroup className='mb-2 mr-sm-2 mb-sm-0'>
-                                            <Label for='worker' className='mr-sm-2' hidden>
-                                                Seleccione un Trabajador
+                                        <FormGroup className='mb-2 mr-sm-2 mb-sm-0 col-sm-4'>
+                                            <Label for='company' className='mr-sm-2' hidden>
+                                                Seleccione una Empresa
                                             </Label>
-                                            <Input type='select' name='company' id='company' placeholder='Seleccione un Trabajador'>
-                                                <option value='' disabled selected>Seleccione un Trabajador</option>
-                                                <option value='11.111.111-1'>Trabajador de Prueba - 16.257.369-8</option>
-                                            </Input>
+                                            <Select
+                                                autoFocus
+                                                isClearable
+                                                components={makeAnimated()}
+                                                value={filteredCompany}
+                                                placeholder='Seleccione una Empresa...'
+                                                className='col-sm-12'
+                                                options={
+                                                    companiesList.map(
+                                                        e => ({ value: e._id, label: `${e.name} - ${e.rut}`, })
+                                                    )
+                                                }
+                                                onChange={this.handleGetWorkers}
+                                            />
+                                        </FormGroup>
+                                        <FormGroup className='mb-2 mr-sm-2 mb-sm-0 col-sm-4'>
+                                            {
+                                                loadingWorkers ?
+                                                    <Spinner color='info' />
+                                                :
+                                                    <>
+                                                        <Label for='worker' className='mr-sm-2' hidden>
+                                                            Seleccione un Trabajador
+                                                        </Label>
+                                                        <Select
+                                                            isClearable
+                                                            isDisabled={!workersList.length}
+                                                            components={makeAnimated()}
+                                                            value={filteredWorker}
+                                                            placeholder='Seleccione un Trabajador...'
+                                                            className='col-sm-12'
+                                                            options={
+                                                                workersList.map(
+                                                                    e => ({ value: e._id, label: `${e.rut} - ${e.name}` })
+                                                                )
+                                                            }
+                                                            onChange={this.handleGetLiquidaciones}
+                                                        />
+                                                    </>
+                                            }
                                         </FormGroup>
                                         <Button color='info'>Cargar Liquidaciones <FontAwesomeIcon icon='search'/></Button>
                                     </Form>
@@ -597,4 +725,4 @@ class Liquidaciones extends React.PureComponent {
     };
 };
 
-export default Liquidaciones;
+export default withCookies(withApollo(Liquidaciones));
